@@ -13,7 +13,6 @@
 
 //helper functions for the gateway server
 #include "worker_process.h"
-#include "ipc_utils.h"
 
 //server port and server identity + SSL server context
 #define PORT 8443  //HTTPS default port
@@ -41,6 +40,7 @@ int main(int argc, char *argv[]) {
 
     //start accepting connections (TCP and SSL set up)
     while (1) {
+        printf("Waiting for incoming connections...\n");
         int new_socket;
         //create TCP connection  
         if (accept_connection(server_fd, &new_socket) < 0) {
@@ -51,12 +51,22 @@ int main(int argc, char *argv[]) {
         if (cSSL == NULL) {
             continue; // move to next connection
         }
-        // now we are ready to read and write the request
-
-
-        //close and clean TLS connection
-        ShutdownSSL(cSSL);
-        close(new_socket);
+        // fork process and hand off to pcc node
+        pid_t pid = fork();
+        if (pid < 0) {
+            perror("Fork failed");
+            ShutdownSSL(cSSL);
+            close(new_socket);
+            continue; // move to next connection
+        } else if (pid == 0) {
+            //child process --> responsible to cSSL and new_socket
+            close(server_fd); 
+            pcc_node_logic(cSSL, new_socket);
+        } else {
+            //parent process --> responsible to server_fd
+            ShutdownSSL(cSSL);
+            close(new_socket);
+        }
     }
     return 0;
 }
@@ -65,7 +75,7 @@ int setup_SSL() {
     // create SSL context for the server
     InitializeSSL();
 
-    // create tls context for this connection --> before negotiation
+    // create tls context 
     ssl_ctx = SSL_CTX_new(SSLv23_server_method());
     if (!ssl_ctx) {
         perror("Unable to create SSL context");
@@ -172,38 +182,3 @@ void ShutdownSSL(SSL *cSSL)
     SSL_free(cSSL);
 }
 
-//             close(server_fd); // Close the listening socket in child
-//             worker_process(new_socket);
-//             close(new_socket);
-//             exit(0);
-//         } else {
-//             // Parent process
-//             close(new_socket); // Close the connected socket in parent
-//             waitpid(pid, NULL, 0); // Wait for child to finish
-//         }
-
-// fork()
-
-// CHILD (pid == 0):
-//   reads from pipe
-//   calls worker_process()
-//   writes response
-//   exit
-
-// PARENT (pid > 0):
-//   writes request
-//   reads response
-//   waitpid()
-
-// fork()
-
-// CHILD (pid == 0):
-//   reads from pipe
-//   calls worker_process()
-//   writes response
-//   exit
-
-// PARENT (pid > 0):
-//   writes request
-//   reads response
-//   waitpid()
