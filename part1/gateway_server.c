@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
 
     //start accepting connections (TCP and SSL set up)
     while (1) {
+        printf("Waiting for incoming connections...\n");
         int new_socket;
         //create TCP connection  
         if (accept_connection(server_fd, &new_socket) < 0) {
@@ -51,8 +52,32 @@ int main(int argc, char *argv[]) {
         if (cSSL == NULL) {
             continue; // move to next connection
         }
-        // now we are ready to read and write the request
-
+        // create pipes for IPC between parent and child processes
+        int pipefd[2];
+        if (pipe(pipefd) == -1) {
+            perror("pipe");
+            ShutdownSSL(cSSL);
+            close(new_socket);
+            continue; // move to next connection
+        }
+        int childPid = fork();
+        if (childPid == 0) {
+            //child process
+            close(pipefd[1]); //close write for child
+            handle_worker_logic(pipefd[0]); //read request from pipe, call worker_process, write response to pipe
+            close(pipefd[0]); //close read for child
+            exit(0); //exit child process after handling request
+        } else {
+            //parent process
+            close(pipefd[0]); //close read for parent
+            char request_buffer[BUFSIZ];
+            int bytes = SSL_read(cSSL, request_buffer, sizeof(request_buffer)); //read request from client and write to pipe
+            if (bytes > 0) {
+                //write request_buffer to pipe
+                send_to_worker(pipefd[1], request_buffer, bytes);
+            }
+            close(pipefd[1]); //close write for parent
+        }
 
         //close and clean TLS connection
         ShutdownSSL(cSSL);
@@ -65,7 +90,7 @@ int setup_SSL() {
     // create SSL context for the server
     InitializeSSL();
 
-    // create tls context for this connection --> before negotiation
+    // create tls context 
     ssl_ctx = SSL_CTX_new(SSLv23_server_method());
     if (!ssl_ctx) {
         perror("Unable to create SSL context");
@@ -172,38 +197,3 @@ void ShutdownSSL(SSL *cSSL)
     SSL_free(cSSL);
 }
 
-//             close(server_fd); // Close the listening socket in child
-//             worker_process(new_socket);
-//             close(new_socket);
-//             exit(0);
-//         } else {
-//             // Parent process
-//             close(new_socket); // Close the connected socket in parent
-//             waitpid(pid, NULL, 0); // Wait for child to finish
-//         }
-
-// fork()
-
-// CHILD (pid == 0):
-//   reads from pipe
-//   calls worker_process()
-//   writes response
-//   exit
-
-// PARENT (pid > 0):
-//   writes request
-//   reads response
-//   waitpid()
-
-// fork()
-
-// CHILD (pid == 0):
-//   reads from pipe
-//   calls worker_process()
-//   writes response
-//   exit
-
-// PARENT (pid > 0):
-//   writes request
-//   reads response
-//   waitpid()
