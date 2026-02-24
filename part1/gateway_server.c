@@ -13,7 +13,6 @@
 
 //helper functions for the gateway server
 #include "worker_process.h"
-#include "ipc_utils.h"
 
 //server port and server identity + SSL server context
 #define PORT 8443  //HTTPS default port
@@ -52,36 +51,22 @@ int main(int argc, char *argv[]) {
         if (cSSL == NULL) {
             continue; // move to next connection
         }
-        // create pipes for IPC between parent and child processes
-        int pipefd[2];
-        if (pipe(pipefd) == -1) {
-            perror("pipe");
+        // fork process and hand off to pcc node
+        pid_t pid = fork();
+        if (pid < 0) {
+            perror("Fork failed");
             ShutdownSSL(cSSL);
             close(new_socket);
             continue; // move to next connection
-        }
-        int childPid = fork();
-        if (childPid == 0) {
-            //child process
-            close(pipefd[1]); //close write for child
-            handle_worker_logic(pipefd[0]); //read request from pipe, call worker_process, write response to pipe
-            close(pipefd[0]); //close read for child
-            exit(0); //exit child process after handling request
+        } else if (pid == 0) {
+            //child process --> responsible to cSSL and new_socket
+            close(server_fd); 
+            pcc_node_logic(cSSL, new_socket);
         } else {
-            //parent process
-            close(pipefd[0]); //close read for parent
-            char request_buffer[BUFSIZ];
-            int bytes = SSL_read(cSSL, request_buffer, sizeof(request_buffer)); //read request from client and write to pipe
-            if (bytes > 0) {
-                //write request_buffer to pipe
-                send_to_worker(pipefd[1], request_buffer, bytes);
-            }
-            close(pipefd[1]); //close write for parent
+            //parent process --> responsible to server_fd
+            ShutdownSSL(cSSL);
+            close(new_socket);
         }
-
-        //close and clean TLS connection
-        ShutdownSSL(cSSL);
-        close(new_socket);
     }
     return 0;
 }
