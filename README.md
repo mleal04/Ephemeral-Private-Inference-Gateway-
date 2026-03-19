@@ -11,13 +11,22 @@
 - Simulate AI inference request handling at infrastructure level
   
 **Components:**
-- Client
-- Privacy Gateway Server
-- Ephemeral Worker Process
+- Client --> Python, Java
+- Privacy Gateway Server --> C, Java, Swift 
+- Ephemeral Worker Process --> C, Java, Swift 
 - External Observer (Testing & Validation)
 
-**Versions:**
+**Versions: [doing the project in several languages]**
 - Python / C
 - Python / Objective C
 - Swift / Java
+
+**Real Life Application 🐊**
+- Client: devices have a cached dictionary to make sure the nodes are privacy preserving 
+- DNS: Point to the correct global load balancer
+- Global Load Balancer: point to the nearest and healthiest Ingress point 
+- Ingress: Terminate TLS, Perform TCP, Attestation to the Client, Point to the nearest Gateway
+- Gateway: Confirm auth
+- PCC nodes : perform inference
+- Special Additions: OHTTPS, HybridTLS
 
