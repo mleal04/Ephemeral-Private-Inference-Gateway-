@@ -11,13 +11,13 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+void ShutdownSSL(SSL *cSSL);
 void pcc_node_logic(SSL *cSSL, int new_socket) {
     char request_buffer[BUFSIZ];
     int bytes = SSL_read(cSSL, request_buffer, sizeof(request_buffer));
     request_buffer[bytes] = '\0';
     //send request to right right nodes fucntions 
-
-
+    printf("%s\n", request_buffer);
     //SSL write response back to client
     char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello from the PCC node!";
     SSL_write(cSSL, response, strlen(response));

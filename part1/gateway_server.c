@@ -11,6 +11,14 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+//declare fucntions 
+int setup_SSL();
+int start_server(char *ip_address);
+SSL *add_TLS_to_socket(int new_socket);
+void InitializeSSL();
+void DestroySSL();
+void ShutdownSSL(SSL *cSSL);
+
 //helper functions for the gateway server
 #include "worker_process.h"
 
@@ -19,6 +27,15 @@
 struct sockaddr_in address; //server identity (ip address and port)
 int addrlen = sizeof(address);
 SSL_CTX *ssl_ctx; //SSL server context
+int server_fd;
+
+void handle_signal(int sig)
+{
+    (void)sig; // Suppress unused warning
+    printf("\nControl-C detected - shutting down server\n");
+    close(server_fd);
+    exit(0);
+}
 
 int main(int argc, char *argv[]) {
     //check for inputs before starting the server
@@ -36,14 +53,18 @@ int main(int argc, char *argv[]) {
 
     //start the server --> ip_address, port 443, https, tcp
     printf("Starting server on %s:%d\n", ip_address, PORT);
-    int server_fd = start_server(ip_address);
+    server_fd = start_server(ip_address);
+
+    // Handle Ctrl+C gracefully
+    signal(SIGINT, handle_signal);
 
     //start accepting connections (TCP and SSL set up)
     while (1) {
         printf("Waiting for incoming connections...\n");
         int new_socket;
-        //create TCP connection  
-        if (accept_connection(server_fd, &new_socket) < 0) {
+        //create TCP connection + accept connection
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
+            perror("accept");
             continue; // move to next connection
         }
         // create SSL connection over TCP
@@ -62,9 +83,9 @@ int main(int argc, char *argv[]) {
             //child process --> responsible to cSSL and new_socket
             close(server_fd); 
             pcc_node_logic(cSSL, new_socket);
+            exit(0);
         } else {
             //parent process --> responsible to server_fd
-            ShutdownSSL(cSSL);
             close(new_socket);
         }
     }
@@ -87,7 +108,7 @@ int setup_SSL() {
 
     // load the server certificate and private key
     if (SSL_CTX_use_certificate_file(ssl_ctx, "./certs_keys/cert.pem", SSL_FILETYPE_PEM) <= 0 ||
-        SSL_CTX_use_PrivateKey_file(ssl_ctx, "./certs_keys/server.key", SSL_FILETYPE_PEM) <= 0) {
+        SSL_CTX_use_PrivateKey_file(ssl_ctx, "./certs_keys/key.pem", SSL_FILETYPE_PEM) <= 0) {
         ERR_print_errors_fp(stderr);
         SSL_CTX_free(ssl_ctx);
         return 1;
