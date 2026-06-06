@@ -10,7 +10,8 @@
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include "gateway_server_helper.h" // Include this to bind the externs!
+#include "gateway_server_helper.h" // Include this to bind the externs! // we are bringing from the main .c file
+
 
 
 void handle_signal(int sig)

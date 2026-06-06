@@ -2,3 +2,4 @@ part1/certs_keys/*.pem
 .vscode/
 part1/venv/
 part1/*.sh
+/swift

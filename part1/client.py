@@ -6,7 +6,6 @@ from cryptography.hazmat.primitives.serialization import load_pem_public_key
 class pythonClient:
     def __init__(self):
         self.url_to_attestation = "https://127.0.0.1:8443/attestation"
-        self.url_to_gateway = "https://127.0.0.1:8443"
         self.url_to_relay = "http://127.0.0.1:8080"
         self.pcc_node_pub_rek = None 
         self.encrypted_message = None
