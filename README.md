@@ -1,22 +1,24 @@
 # Ephemeral-Private-Inference-Gateway
 
-- This project simulates private AI inference routing architecture where user requests are processed by ephemeral compute workers.
+- This project simulates a privacy-preserving AI inference infrastructure where user requests are processed by ephemeral compute workers.
 - The system is designed so that no user data persists beyond the lifetime of a single request not in logs, memory, or disk.
-- The AI requests (the prompts) cannot ever be seen by any intermidiary network route (even the gateway itself).
-- We handle HTTPS, and OHTTPS via a middle relay (to remove user identity).
-- We perform attestion from the client to the node.
+- The goal is to enforce privacy by system design, not by policy.
 
-**What are we trying to mimic:**
-- TGT, OTTS, REKs, DEKs for attestion and encryption
-- x509 certificates for assymetric infrastructure and TLS
-- Understanding of network protocols + security 
+**Goals:**
+- Ensure no request data is stored
+- Enforce ephemeral computation
+- Demonstrate clear trust boundaries
+- Simulate AI inference request handling at infrastructure level
   
 **Components:**
 - Client --> Python
-- Privacy Gateway Server --> C,  Swift 
-- Ephemeral Worker Process --> C,  Swift 
+- Privacy Gateway Server --> C, Swift 
+- Ephemeral Worker Process --> C, Swift 
 - External Observer (Testing & Validation)
 
+**Versions: [doing the project in several languages]**
+- Python / C
+- Python / Swift
 
 **Real Life Application 🐊**
 - Client: devices have a cached dictionary to make sure the nodes are privacy preserving 
@@ -61,3 +63,5 @@
                                 ( Decrypts payload with Private REK )
 
 ````
+
+

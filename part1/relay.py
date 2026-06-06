@@ -39,3 +39,25 @@ def run_relay(port=8080):
 
 if __name__ == '__main__':
     run_relay()
+
+# from fastapi import FastAPI, Request, Response
+# import httpx
+# import uvicorn  # 1. Import the ASGI server
+
+# app = FastAPI()
+# GATEWAY_URL = "https://127.0.0.1:8443/inference"
+# async_client = httpx.AsyncClient(verify=False)
+
+# @app.post("/")
+# async def privacy_relay(request: Request):
+#     raw_payload = await request.body()
+#     encrypted_payload_str = raw_payload.decode('utf-8')
+#     try:
+#         gateway_response = await async_client.post(GATEWAY_URL, content=encrypted_payload_str)
+#         return Response(content=gateway_response.text, status_code=gateway_response.status_code)
+#     except Exception as e:
+#         return Response(content=f"Relay error: {e}", status_code=500)
+
+# # 2. Add this block to lock down port 8080 natively
+# if __name__ == '__main__':
+#     uvicorn.run("relay:app", host="127.0.0.1", port=8080, log_level="info")
